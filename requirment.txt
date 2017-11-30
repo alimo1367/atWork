@@ -1,0 +1,6 @@
+numpy
+opencv-python
+pyrealsense
+msgpack-rpc-python
+scikit-learn
+Pyro4
