@@ -135,3 +135,42 @@ DepthM  =0
 #------------------- Defining basic functins -------------------------------
 #        These functions are calls in intialization and in the main loop
 #---------------------------------------------------------------------------
+def CamInit():
+    global cam,c,d,Rows,Cols,N,Xc,Yc
+    global P11,P12,P13,P21,P22,P23,P31,P32,P33
+    global extrinsics
+    global depth100 , cad100 , dac100 , depthscale100
+    #pyrs.start()
+    serv = pyrs.Service()
+
+    cam = serv.Device(device_id=0, streams=[pyrs.stream.CADStream(fps=60),
+                                            pyrs.stream.DACStream(fps=60),
+                                            pyrs.stream.ColorStream(fps=60),
+                                            pyrs.stream.DepthStream(fps=60)])
+    #extrinsics = cam.get_device_extrinsics(cam.streams[1].stream, cam.streams[0].stream)
+    cam.wait_for_frames()
+    c = cam.color
+    depth100 = cam.depth
+    cad100 = cam.cad
+    dac100 = cam.dac
+    depthscale100 = cam.depth_scale
+
+    #DepthM = cam.depth * cam.depth_scale * 1000
+    DepthM = np.uint8(cam.dac * cam.depth_scale * 125)
+    Rows, Cols = DepthM.shape[:2]
+    N = 100
+    Xc = Rows / 2
+    Yc = Cols / 2
+
+    P11 = [Xc - N, Yc - N]
+    P12 = [Xc - 0, Yc - N]
+    P13 = [Xc + N, Yc - N]
+    P21 = [Xc - N, Yc + 0]
+    P22 = [Xc - 0, Yc + 0]
+    P23 = [Xc + N, Yc + 0]
+    P31 = [Xc - N, Yc + N]
+    P32 = [Xc - 0, Yc + N]
+    P33 = [Xc + N, Yc + N]
+
+#---------------------------------------------------------------------------
+def Cam_Config():
