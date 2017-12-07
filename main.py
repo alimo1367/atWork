@@ -174,3 +174,89 @@ def CamInit():
 
 #---------------------------------------------------------------------------
 def Cam_Config():
+    global cam
+    pyrs.core.DeviceBase.set_device_option(cam,option=rs_option.RS_OPTION_COLOR_ENABLE_AUTO_WHITE_BALANCE,value=-1)
+    pyrs.core.DeviceBase.set_device_option(cam,option=rs_option.RS_OPTION_COLOR_BACKLIGHT_COMPENSATION,value=0)
+    pyrs.core.DeviceBase.set_device_option(cam,option=rs_option.RS_OPTION_COLOR_BRIGHTNESS,value=10)
+    pyrs.core.DeviceBase.set_device_option(cam,option=rs_option.RS_OPTION_COLOR_CONTRAST,value=50)
+    pyrs.core.DeviceBase.set_device_option(cam,option=rs_option.RS_OPTION_COLOR_EXPOSURE,value=500)
+    pyrs.core.DeviceBase.set_device_option(cam,option=rs_option.RS_OPTION_COLOR_GAIN,value=65)
+    pyrs.core.DeviceBase.set_device_option(cam,option=rs_option.RS_OPTION_COLOR_GAMMA,value=100)
+    pyrs.core.DeviceBase.set_device_option(cam,option=rs_option.RS_OPTION_COLOR_HUE,value=0)
+    pyrs.core.DeviceBase.set_device_option(cam,option=rs_option.RS_OPTION_COLOR_SATURATION,value=70)
+    pyrs.core.DeviceBase.set_device_option(cam,option=rs_option.RS_OPTION_COLOR_SHARPNESS,value=100)
+    pyrs.core.DeviceBase.set_device_option(cam,option=rs_option.RS_OPTION_COLOR_WHITE_BALANCE,value=4600)
+#---------------------------------------------------------------------------
+
+def imgRead(cFileName, cadFileName, dFileName):
+    global MaxArea,MinArea
+
+    ImgOriginal = cv2.imread(cFileName)
+    ImgOriginal = cv2.resize(ImgOriginal, ImageSize)
+
+    ImgCad = cv2.imread(cadFileName)
+    ImgCad = cv2.resize(ImgCad, ImageSize)
+    ImgDepth = cv2.imread(dFileName)
+    ImgDepth = cv2.resize(ImgDepth, ImageSize)
+
+    ImgDepth = ImgDepth[65:415,65:490].copy()
+    ImgDepth = cv2.resize(ImgDepth, ImageSize)
+    ImgCroped = ImgCad[65:415,65:490].copy()
+    ImgCad=cv2.resize(ImgCroped, ImageSize)
+
+    ImgGrayBlured = cv2.cvtColor(ImgCad, cv2.COLOR_BGR2GRAY)
+    Xc, Yc = ImageCenter
+    MM=10
+    Points= np.array([ImgDepth[Xc-MM,Yc-MM], ImgDepth[Xc+MM,Yc-MM],ImgDepth[Xc-MM,Yc+MM],ImgDepth[Xc+MM,Yc+MM]])
+    Tmp=myRobot.GetDepthCenterCam(Points)
+    # ------------------------------------------------
+   # if (Tmp == 0):
+   #     Tmp = myRobot.GetDepthCenterCam(Points)
+    #cv2.imshow('imgGrayBlured ', ImgGrayBlured)
+    #cv2.imshow('imgDepth ', ImgDepth)
+    #cv2.imshow('ShapeMask ', ImgCad)
+    #cv2.imshow('imgOriginal ', ImgOriginal)
+   # key = cv2.waitKey(0)
+   # if (key == 27):
+    #      exit(0)
+
+
+    Dthreshold = np.int16(Tmp * 1.4)
+
+    MinArea = 500
+    MaxArea = 50000
+    if(Tmp <40) :
+        MaxArea = 100000
+        MinArea = 2000
+
+
+   # Res = blend(ImgCad,ImgDepth, ImageSize)
+    ImgDepth = cv2.cvtColor(ImgDepth, cv2.COLOR_BGR2GRAY)
+    rec, ImgDepth = cv2.threshold(ImgDepth, Dthreshold, 255, cv2.THRESH_TOZERO_INV)
+    Rate = 255 / Dthreshold
+    ImgDepth = ImgDepth * Rate
+    # --------------------------------
+    kernel = np.ones((15, 15), np.uint8)
+    ImgDepth = cv2.morphologyEx(ImgDepth, cv2.MORPH_ERODE, kernel, iterations=1)
+    ImgDepth = cv2.morphologyEx(ImgDepth, cv2.MORPH_DILATE, kernel, iterations=2)
+    rec, ImgDepth = cv2.threshold(ImgDepth, Dthreshold, 255, cv2.THRESH_BINARY)
+
+    # --------------------------------
+    kernel = np.ones((15, 15), np.uint8)
+    ImgDepth = cv2.morphologyEx(ImgDepth, cv2.MORPH_DILATE, kernel, iterations=2)
+    rec, ImgDepth = cv2.threshold(ImgDepth, 80, 255, cv2.THRESH_BINARY)
+   # cv2.imshow("Depth", ImgDepth)
+    kernel = np.ones((9, 9), np.uint8)
+
+   # ImgGrayBlured = cv2.GaussianBlur(ImgGrayBlured, (15, 15), 0)
+    blur5 = cv2.GaussianBlur(ImgGrayBlured, (11, 11), 0)
+    blur3 = cv2.GaussianBlur(ImgGrayBlured, (17, 17), 0)
+    ImgGrayBlured = (blur3 - blur5) * 10
+    ImgGrayBlured = cv2.morphologyEx(ImgGrayBlured, cv2.MORPH_DILATE, kernel, iterations=1)
+    ImgGrayBlured = cv2.GaussianBlur(ImgGrayBlured, (11, 11), 0)
+    ImgGrayBlured = cv2.morphologyEx(ImgGrayBlured, cv2.MORPH_ERODE, kernel, iterations=1)
+
+
+    return(ImgGrayBlured, ImgDepth, ImgOriginal)
+#---------------------------------------------------------------------------
+def myFilter (img):
