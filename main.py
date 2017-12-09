@@ -260,3 +260,60 @@ def imgRead(cFileName, cadFileName, dFileName):
     return(ImgGrayBlured, ImgDepth, ImgOriginal)
 #---------------------------------------------------------------------------
 def myFilter (img):
+    img = cv2.filter2D(img, 1, kernel1)
+    return (img)
+#---------------------------------------------------------------------------
+
+def  SurfGen(img):
+    #img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    kp, desc = surf.detectAndCompute(img, None)
+    return(kp, desc)
+#---------------------------------------------------------------------------
+def MedianFilter(Points):
+    P=Points.copy()
+    M = np.size(P)
+    P = (P.reshape(M))
+    P.sort()
+    L = P.__len__()
+    if (L<1):
+        return 0
+    L = np.int16(L/2)
+    return P[L]
+#---------------------------------------------------------------------------
+def  DepthCenter():
+    global cam
+    global DepthM
+    global DDepths
+    global ImgDepth
+    global depth100 , cad100 , dac100 , depthscale100
+
+    #dd = cam.depth * cam.depth_scale * DepthScale
+
+    dd = np.uint8(dac100 * depthscale100 * 125)
+    dd2 = cv2.resize(dd, ImageSize)
+    # print  dd.shape, dd2.shape, ImageSize
+
+    for i in range(0, DepthSamples):
+        DDepths[:,:,i]= DDepths[:,:,i+1]
+    DDepths[:, :, DepthSamples]=dd2
+
+    DepthM  = np.median(DDepths, axis=2)
+
+    ImgDepth = cv2.applyColorMap(DepthM.astype(np.uint8), cv2.COLORMAP_BONE)
+    X11 = MedianFilter(DepthM[P11[0] - 2:P11[0] + 2, P11[1] - 2:P11[1] + 2])
+    X13 = MedianFilter(DepthM[P13[0] - 2:P13[0] + 2, P13[1] - 2:P13[1] + 2])
+    X22 = MedianFilter(DepthM[P22[0] - 2:P22[0] + 2, P22[1] - 2:P22[1] + 2])
+    X31 = MedianFilter(DepthM[P31[0] - 2:P31[0] + 2, P31[1] - 2:P31[1] + 2])
+    X33 = MedianFilter(DepthM[P33[0] - 2:P33[0] + 2, P33[1] - 2:P33[1] + 2])
+
+    cv2.putText(ImgDepth, np.str(X11)[0:6], (P11[1], P11[0]), cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 255))
+    cv2.putText(ImgDepth, np.str(X13)[0:6], (P13[1], P13[0]), cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 255))
+    cv2.putText(ImgDepth, np.str(X22)[0:6], (P22[1], P22[0]), cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 255))
+    cv2.putText(ImgDepth, np.str(X31)[0:6], (P31[1], P31[0]), cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 255))
+    cv2.putText(ImgDepth, np.str(X33)[0:6], (P33[1], P33[0]), cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 255))
+    Points=np.array([X11,X13,X22,X31,X33])
+
+    return (Points)
+
+#---------------------------------------------------------------------------
+
