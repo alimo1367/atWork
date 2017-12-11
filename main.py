@@ -317,3 +317,44 @@ def  DepthCenter():
 
 #---------------------------------------------------------------------------
 
+def myFindContourMask(imgGrayBlured,Lw,Up):
+    global shapeMask
+    global shapeMask
+
+    lower = np.array(Lw)
+    upper = np.array(Up)
+   #--------------------------------
+    shapeMask = cv2.inRange(imgGrayBlured, lower, upper)
+
+   # shapeMask = cv2.morphologyEx(shapeMask,cv2.MORPH_OPEN,kernel, iterations = 1)
+   # shapeMask = cv2.morphologyEx(shapeMask, cv2.MORPH_DILATE, kernel, iterations=1)
+
+
+
+    #---------------------------------------------------------
+    (cnts, _) = cv2.findContours(shapeMask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+   # print "I found %d black shapes" % (len(cnts))
+    BigSizeCnts=[]
+    h, w = shapeMask.shape[:2]
+    mask = np.zeros((h + 2, w + 2), np.uint8)
+    mask[:] |= 0
+    flags = 4
+    flags |= cv2.FLOODFILL_FIXED_RANGE
+
+    for cnt in cnts:
+        area = cv2.contourArea(cnt)
+        if ((area >= MaxArea) | (area <= MinArea)):
+            P =  (cnt[0,0,0], cnt[0,0,1]) #(np.int16(ellipse[0][0]), np.int16(ellipse[0][1]))
+            cv2.floodFill(shapeMask, mask , P, 0,flags=flags )
+        else :
+            x, y, w, h = cv2.boundingRect(cnt)
+            if ((w>400) | (h>400)):
+                P = (cnt[0, 0, 0], cnt[0, 0, 1])  # (np.int16(ellipse[0][0]), np.int16(ellipse[0][1]))
+                cv2.floodFill(shapeMask, mask, P, 0, flags=flags)
+
+    return (shapeMask)
+
+#---------------------------------------------------------------------------
+
+def myFindContour(shapeMask, imgOriginal):
