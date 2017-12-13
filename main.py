@@ -358,3 +358,77 @@ def myFindContourMask(imgGrayBlured,Lw,Up):
 #---------------------------------------------------------------------------
 
 def myFindContour(shapeMask, imgOriginal):
+    global DepthM
+
+    (cnts, _) = cv2.findContours(shapeMask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    #print "I found %d black shapes" % (len(cnts))
+    BigSizeCnts=[]
+    for cnt in cnts:
+        area = cv2.contourArea(cnt)
+        if((area <MaxArea) & (area>MinArea)):
+           BigSizeCnts = BigSizeCnts + [cnt]
+    ImgCroped = []
+    ImgCropedInfo = np.zeros((1,11),dtype='float')
+
+    nCrope = 0
+    for cnt in BigSizeCnts:
+            x, y, w, h = cv2.boundingRect(cnt)
+            x1= x- Wcrop
+            y1= y- Wcrop
+            x2= x + w + Wcrop
+            y2= y + h + Wcrop
+
+            if (x1<0):
+                x1=0
+            if (y1<0):
+                y1=0
+
+            #====================================================================
+            #--     Reject negative objects which are comes from edges of boxes
+            #-------------------------------------------------------------------
+            X11 = MedianFilter(DepthM[ y1   :y1+1  , x1-2:x1    ])
+            X12 = MedianFilter(DepthM[ y2   :y2+2, x1-2:x1      ])
+            X21 = MedianFilter(DepthM[ y1-2 :y1  , x2    :x2+2  ])
+            X22 = MedianFilter(DepthM[ y2   :y2+2, x2    :x2+2  ])
+
+
+            Points= [X11,X12,X21,X22]
+            Ap=np.average(Points)
+            Vp= np.var(Points)
+            print(Ap, Vp, Points)
+            if ((Ap<25.1) & (Vp>15.1)):    # if the surface is not flat
+                continue
+            #===================================================================
+
+            ImgCroped =  ImgCroped + [imgOriginal[y1:y2, x1:x2].copy()]
+           # cv2.imshow('Show image patch ...',img[y1:y2, x1:x2].copy() )
+           # k = cv2.waitKey(0) & 0xff
+            #if k == 27:
+             #   exit(0)
+
+            cv2.rectangle(imgOriginal, (x1, y1), (x2,y2), (0, 255, 255), 2)
+           # rows, cols = imgGrayBlured.shape[:2]
+            #cv2.imshow('Box Bordered', img1)
+            [vx, vy, Xc, Yc] = cv2.fitLine(cnt, cv2.DIST_LABEL_PIXEL, 0, 0.01, 0.01)
+           # lefty = int((-x * vy / vx) + y)
+           # righty = int(((cols - x) * vy / vx) + y)
+            Orientation= (np.arctan(-vy / vx) * (180 / 3.14))
+            #print(Orientation)
+           # cv2.line(img1, (cols - 1, righty), (0, lefty), (0, 255, 0), 2)
+
+
+
+            if nCrope==0 :
+                ImgCropedInfo[0:10] = [x1,y1,x2,y2,Xc,Yc,0,w,h,Orientation,area]
+            else:
+                Zc=0    #  Temporarily is inserted zero, it will be set value by ObjectRecognition()
+                ImgCropedInfo = np.vstack([ImgCropedInfo,[x1,y1,x2,y2,Xc,Yc,Zc,w,h,Orientation,area]])
+            nCrope += 1
+
+    imgOriginal = cv2.drawContours(imgOriginal, cnts, 0, (0, 255, 0), 3)
+    return (ImgCroped, ImgCropedInfo )
+
+#----------------------------------------------------------------------------------------------------------------------
+
+#---------------------------------------------------------------------------
