@@ -432,3 +432,69 @@ def myFindContour(shapeMask, imgOriginal):
 #----------------------------------------------------------------------------------------------------------------------
 
 #---------------------------------------------------------------------------
+def FeaturePoolGeneration(sPath):
+
+
+    PathColor= sPath + 'Color/*.png'
+
+    LstClr = glob.glob(PathColor)
+    LstClr.sort()
+
+    PoolFeature = []
+
+    kernel = np.ones((11, 11), np.uint8)
+    Idx=0
+    for cFileName in LstClr:
+       dFileName   =  sPath + 'Depth/'+ cFileName[cFileName.__len__() - 19:cFileName.__len__()]
+       cadFileName =  sPath + 'Cad/'  + cFileName[cFileName.__len__() - 19:cFileName.__len__()]
+       Idx=Idx+1
+       print(Idx,'==>', cFileName)
+
+
+
+       imgGrayBlured, imgDepth, imgOriginal = imgRead(cFileName, cadFileName, dFileName)
+       # tt1 = myFindContourMask(imgDepth, [1], [50])
+
+       tt2 = myFindContourMask(imgGrayBlured, [100], [250])
+       ShapeMask = tt2 # & imgDepth
+       ShapeMask = cv2.morphologyEx(ShapeMask, cv2.MORPH_CLOSE, kernel, iterations=2)
+
+
+       (ImgCropedList, ImgCropedInfo) =  myFindContour(ShapeMask, imgOriginal)
+       # ------------------------------------------------
+       #if(cFileName=='/home/atwork/Prog/Vision/DataSet/ColorNew/15-10-40-00-004.png'):
+       #cv2.imshow('imgGrayBlured ', imgGrayBlured)
+       #cv2.imshow('imgDepth ', imgDepth)
+       #cv2.imshow('ShapeMask ', ShapeMask)
+       #cv2.imshow('imgOriginal ', imgOriginal)
+       #key = cv2.waitKey(0)
+       #if (key == 27):
+       #    exit(0)
+       # ------------------------------------------------
+
+
+       nCrope = 0
+       for ImgCroped in ImgCropedList:
+            kp, desc = SurfGen(ImgCroped)
+            nCrope += 1
+
+        #    if(cFileName == '/home/atwork/Prog/Vision/DataSet/ColorNew/15-10-40-00-004.png'):
+        #        img2 = cv2.drawKeypoints(ImgCroped, kp, None, (255, 0, 0), 4)
+        #        surf.upright = True
+        #        cv2.imshow('img', ImgCroped)
+        #        cv2.imshow('img2', img2)
+        #        key = cv2.waitKey(0)
+        #     if (key == 27):
+          #           exit(0)
+            print( nCrope, len(kp))
+            if (len(kp) > 5):
+                for h, des in enumerate(desc):
+                    PoolFeature.append(des)
+
+
+    PoolFeature = np.float32(np.array(PoolFeature))
+    print('Number of FeaturePool : ', len(PoolFeature))
+    print('Generated from ', len(LstClr) , 'files')
+    return (PoolFeature)
+#---------------------------------------------------------------------------
+
