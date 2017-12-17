@@ -498,3 +498,48 @@ def FeaturePoolGeneration(sPath):
     return (PoolFeature)
 #---------------------------------------------------------------------------
 
+def HistogramOfBOW(BagOfWords, sPath):
+
+    HistBoW = []
+    labels  = []
+    PathColor= sPath + 'Color/*.png'
+
+    LstClr = glob.glob(PathColor)
+    LstClr.sort()
+    Idx1 = 0
+    for cFileName in LstClr:
+        dFileName   =  sPath + 'Depth/'+ cFileName[cFileName.__len__() - 19:cFileName.__len__()]
+        cadFileName =  sPath + 'Cad/'  + cFileName[cFileName.__len__() - 19:cFileName.__len__()]
+
+        imgGrayBlured, imgDepth, imgOriginal = imgRead(cFileName, cadFileName, dFileName)
+        #tt1 = myFindContourMask(imgDepth, [1], [50])
+        tt2 = myFindContourMask(imgGrayBlured, [100], [255])
+        ShapeMask = tt2 #& imgDepth
+
+        (ImgCropedList, ImgCropedInfo) = myFindContour(ShapeMask, imgOriginal)
+
+
+        nCrope=0
+
+        Idx2 = 0
+
+        for ImgCroped in ImgCropedList :
+            kp, desc = SurfGen(ImgCroped)
+
+            nCrope +=1
+            if(len(kp)>5) :
+              matches = bf.match(desc, BagOfWords)
+              Hist = np.zeros((BoWSize,), dtype=np.int)
+              for i in range(0, len(matches)):
+                  T = matches[i].trainIdx
+                  Hist[T] += 1
+              HistBoW= HistBoW + [Hist]
+
+              print('===>', cFileName)
+              nTmp = int(dFileName[dFileName.__len__() - 19:dFileName.__len__() - 17] + dFileName[ dFileName.__len__() - 16:dFileName.__len__() - 14])
+              labels=labels + [nTmp]
+    labels  = np.float32(labels).reshape(labels.__len__(),1)
+    HistBoW = np.float32(HistBoW)/20
+    return (HistBoW, labels)
+#---------------------------------------------------------------------------
+
