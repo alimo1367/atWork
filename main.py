@@ -543,3 +543,104 @@ def HistogramOfBOW(BagOfWords, sPath):
     return (HistBoW, labels)
 #---------------------------------------------------------------------------
 
+def ObjectRecognition(imgGrayBlured,imgDepth ,imgOriginal,clf ):
+    global MyObjects
+    ############## added by faraz jalili #######################
+
+    ###########################################################
+    global DepthM
+    global ShapeMask
+   # tt0 = myFindContourMask(imgDepth, [1], [70])
+   # tt1 = myFindContourMask(imgDepth, [140], [255])
+   # tt1 = tt1 | tt0
+
+    tt2 = myFindContourMask(imgGrayBlured, [1], [255])
+    kernel = np.ones((11, 11), np.uint8)
+    imgDepth = cv2.morphologyEx(imgDepth, cv2.MORPH_DILATE, kernel, iterations=2)
+
+    ShapeMask = tt2 & imgDepth
+    ShapeMask = cv2.morphologyEx(ShapeMask, cv2.MORPH_DILATE, kernel, iterations=1)
+   # cv2.imshow('TT1', tt1)
+   # cv2.imshow('TT2', tt2)
+    #cv2.imshow('ShapeMask', ShapeMask)
+
+    (ImgCropedList, ImgCropedInfo) = myFindContour(ShapeMask, imgOriginal)
+   # (ImgCropedList,ImgCropedInfo)  = myFindContour(img)
+    nCrope = 0
+    Hist1=[]
+    del MyObjects.Obj_List[:]
+
+
+
+    for ImgCroped in ImgCropedList:
+
+        kp, desc = SurfGen(ImgCroped)
+
+      #  cv2.imshow('ImCcroped', ImgCroped)
+      #  img2 = cv2.drawKeypoints(ImgCroped, kp, None, (255, 0, 0), 4)
+      #  cv2.imshow('img2', img2)
+      #  k = cv2.waitKey(0) & 0xff
+       # if k == 27:
+       #     break
+
+        if (len(kp) > 0):
+            matches = bf.match(desc, BagOfWords)
+            Hist = np.zeros((BoWSize,), dtype=np.int)
+            for i in range(0, len(matches)):
+                T = matches[i].trainIdx
+                Hist[T] += 1
+
+          #  labelTmp = int(sFileName[sFileName.__len__() - 17:sFileName.__len__() - 15])
+            Hist1=Hist1+[Hist]
+            Hist1 = np.float32(Hist1) / 20
+            y_val = clf. predict_all(Hist1)
+            if ((y_val[0][0]>=0) and (y_val[0][0]<=9999)):
+                X1, Y1,X2,Y2 ,Xc,Yc = np.int16(ImgCropedInfo[nCrope,0]), \
+                                      np.int16(ImgCropedInfo[nCrope,1]), \
+                                      np.int16(ImgCropedInfo[nCrope,2]), \
+                                      np.int16(ImgCropedInfo[nCrope,3]), \
+                                      np.int16(ImgCropedInfo[nCrope,4]), \
+                                      np.int16(ImgCropedInfo[nCrope,5])
+                #--------------------------------
+                N1, N2 = X1/ObjectsGridSizeWidth,Y1/ObjectsGridSizeHight
+                # --------------------------------
+                ObjectsOrientationInGrid[0, N1, N2] = ObjectsOrientationInGrid[1, N1, N2]
+                ObjectsOrientationInGrid[1, N1, N2] = ObjectsOrientationInGrid[2, N1, N2]
+                ObjectsOrientationInGrid[2, N1, N2] = ObjectsOrientationInGrid[3, N1, N2]
+                ObjectsOrientationInGrid[3, N1, N2] = ObjectsOrientationInGrid[4, N1, N2]
+                ObjectsOrientationInGrid[4, N1, N2] = ImgCropedInfo[nCrope,9]
+                Orint = np.int32(MedianFilter(ObjectsOrientationInGrid[:,N1,N2]))
+                #--------------------------------------------
+                RR=y_val[0][0] #MedianFilter(ObjectsLabelInGrid[:,N1,N2])
+                #--------------------------------------------
+                #ImgCropedInfo[nCrope, 6] = 0
+                Z=[0,0,0,0]
+                try:
+                    Z[0] = MedianFilter(DepthM[X1 - 2:X1+ 2, Y1 - 2:Y1 + 2])
+                    Z[1] = MedianFilter(DepthM[Y1 - 2:Y1 + 2, X2 - 2:X2 + 2])
+                    Z[2] = MedianFilter(DepthM[Y2 - 2:Y2 + 2, X1 - 2:X1 + 2])
+                    Z[3] = MedianFilter(DepthM[Y2 - 2:Y2 + 2, X2 - 2:X2 + 2])
+                    Z=np.setdiff1d(Z, [0])
+                    Zc= np.mean(Z)
+                    ImgCropedInfo[nCrope, 6]= np.int16(Zc)
+                    ImgCropedInfo[nCrope, 9]= Orint
+
+                except :
+                    pass
+
+                #--------------------------------------------
+                #print ('RR==== ', RR)
+                S = ObjectsLabel[np.int32(RR)]
+                Str = S + ':' + Orint.__str__()
+                cv2.rectangle(imgOriginal, (X1, Y1), (X2, Y2), (0, 0, 255), 2)
+                cv2.putText(imgOriginal,Str, ( X1,Y1), cv2.FONT_HERSHEY_PLAIN, 01, [0, 255, 100], 2)
+
+                MyObjects = MrlObjects(ID=y_val[0][0], ImgCropedInfo=ImgCropedInfo[nCrope,:])
+
+
+            nCrope += 1
+   # imgDepth=shapeMask
+    return
+#---------------------------------------------------------------------------
+#===========================================================================
+#----------------------------- Define Object's class -----------------------
