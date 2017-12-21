@@ -644,3 +644,40 @@ def ObjectRecognition(imgGrayBlured,imgDepth ,imgOriginal,clf ):
 #---------------------------------------------------------------------------
 #===========================================================================
 #----------------------------- Define Object's class -----------------------
+class MrlObjects(object):
+ # ---------------------------------------------------------------------------
+    Obj_List=[]
+    #ImgCropedInfo[0:9] = [x1,y1,x2,y2 ,Xc,Yc ,w,h ,Orientation,area]
+    def __init__(self,ID,ImgCropedInfo):
+        MrlObjects.Obj_List.append(self)
+    #def AddNewObject(self, ID, Name,ImgCropedInfo):
+        self.ObjID     = ID
+        self.ObjName   = ObjectsLabel[ID]
+        self.ObjBox    = ImgCropedInfo[0:4]   # (X1,Y1),  (X2,Y2) of box
+        Xc=   (ImgCropedInfo[0]+ImgCropedInfo[2])/2 -320
+        Yc= -((ImgCropedInfo[1]+ImgCropedInfo[3])/2 -240)
+        Zc = (100*ImgCropedInfo[6]/DepthScale)
+        self.ObjPose = ([int(Xc),int(Yc),int(Zc)])  # Xc,Yc,Zc  are Object position
+        ####################
+        self.xf=int(Xc)
+        self.yf = int(Yc)
+        self.zf = int(Zc)
+        ####################
+        self.ObjWH     = ImgCropedInfo[7:9]  # width,Hight are Object position
+        self.ObjOrient = ImgCropedInfo[9]
+        self.ObjArea   = ImgCropedInfo[9]
+
+        # this is just for output formatting
+    def OutInfo(self):
+         return 'ObjName: {}  || Pose: {} || Area: {} \n' .format(self.ObjName , self.ObjPose,self.ObjArea)
+    #-------------------------------------------------------------
+    def ObjCount(self):
+        return len(self.Obj_List)
+
+
+    def toJSON(self):
+        return "{u'name': %r}" % self.ObjID.decode('utf-8')
+
+
+#---------------------------------------------------------------------------
+#---------------------------   Define Mrl Robot Class ----------------------
