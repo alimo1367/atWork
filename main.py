@@ -681,3 +681,31 @@ class MrlObjects(object):
 
 #---------------------------------------------------------------------------
 #---------------------------   Define Mrl Robot Class ----------------------
+class MrlRobot(object):
+    PoseRb = [0, 0, 0, 0]  # X,Y,Z,thta  are Robot  position
+    PoseAr = [0, 0, 0, 0]  # X,Y,Z,thta  are ARM    position
+    PoseCa = [0, 0, 0, 0]  # X,Y,Z,thta  are Cam    position
+    PoseOb = [0, 0, 0, 0]  # X,Y,Z,thta  are Object position
+    PoseCp = [0, 0, 0, 0]  # 0,0,Z,thta  is dpeth in center point of camera in average of 5 points
+    #-------------------------------------------------------------
+    ## sorting 5 points and then average the middle of 3 points
+    def GetDepthCenterCam(self,Points):
+
+        Points = np.setdiff1d(Points, [0])
+        Points.sort()
+        if(Points.__len__()==0):
+            Points=[0,0,0]
+
+        L = Points.__len__()/2
+        self.PoseCp[2]=np.array(Points[L-1:L+1]).mean()
+        return (self.PoseCp[2])
+
+
+
+#--------------------------------------------------------------------------
+
+
+
+#def ObjListPrint(): print([MrlObjects.OutInfo() for MrlObjects in MyObjects.RObj_List])
+#--------------------------------------------------------------------------
+#while True:
