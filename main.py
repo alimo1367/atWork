@@ -709,3 +709,73 @@ class MrlRobot(object):
 #def ObjListPrint(): print([MrlObjects.OutInfo() for MrlObjects in MyObjects.RObj_List])
 #--------------------------------------------------------------------------
 #while True:
+def cmd_val():
+    global ImgDepth
+    global ImgCADs
+    global MaxArea,MinArea
+    global DepthM
+    global ShapeMask
+    global c , depth100 , cad100 , dac100 , depthscale100
+
+    ImgCad = cv2.cvtColor(cad100, cv2.COLOR_RGB2BGR)
+    ImgOriginal = cv2.cvtColor(c, cv2.COLOR_RGB2BGR)
+
+
+    ImgCroped = ImgCad[65:415,60:500].copy()
+    ImgCad=cv2.resize(ImgCroped,ImageSize)
+
+    Tmp=myRobot.GetDepthCenterCam(DepthCenter())
+    Dthreshold = np.int16(Tmp * 1.25)
+    ImgDepth[:,:,0]=DepthM
+    MinArea = 500
+    MaxArea = 50000
+    if(Tmp <40) :
+        MaxArea = 100000
+        MinArea = 1500
+
+    #Res= blend(ImgCad,ImgDepth, ImageSize)
+
+
+    rec, ImgDepth = cv2.threshold(ImgDepth, Dthreshold, 255, cv2.THRESH_TOZERO_INV)
+    #cv2.imshow("Depth", 10*ImgDepth)
+    Rate = 255 / Dthreshold
+    ImgDepthGray = ImgDepth[:,:,0] * Rate
+    # --------------------------------
+    kernel = np.ones((15, 15), np.uint8)
+    ImgDepthGray = cv2.morphologyEx(ImgDepthGray, cv2.MORPH_ERODE, kernel, iterations=1)
+    ImgDepthGray = cv2.morphologyEx(ImgDepthGray, cv2.MORPH_DILATE, kernel, iterations=2)
+    rec, ImgDepthGray = cv2.threshold(ImgDepthGray, Dthreshold, 255, cv2.THRESH_BINARY)
+
+
+    #imgOriginal = cv2.resize(ImgOriginal, ImageSize)
+    #ImgDepth    = cv2.resize(ImgDepth   , ImageSize)
+
+    kernel = np.ones((9, 9), np.uint8)
+    CAD0 = cv2.cvtColor(ImgCad, cv2.COLOR_BGR2GRAY)
+    #----------------------------------------------------
+    #    Median Filter
+    for i in range(0, DepthSamples):
+        ImgCADs[:, :, i] = ImgCADs[:, :, i + 1]
+        ImgCADs[:, :, DepthSamples] = CAD0
+
+    imgGrayBlured  = np.median(ImgCADs, axis=2)
+    #____________________________________________________
+    imgGrayBlured = cv2.GaussianBlur(imgGrayBlured, (15, 15), 0)
+    blur5 = cv2.GaussianBlur(imgGrayBlured, (11, 11), 0)
+    blur3 = cv2.GaussianBlur(imgGrayBlured, (17, 17), 0)
+    imgGrayBlured = (blur3 - blur5)
+    imgGrayBlured = cv2.morphologyEx(imgGrayBlured, cv2.MORPH_DILATE  , kernel, iterations=1)
+    imgGrayBlured = cv2.GaussianBlur(imgGrayBlured, (11, 11), 0)
+    imgGrayBlured = cv2.morphologyEx(imgGrayBlured, cv2.MORPH_ERODE  , kernel, iterations=1)
+
+    #cv2.imshow("imgGrayBlured", imgGrayBlured )
+    ObjectRecognition(imgGrayBlured,ImgDepthGray ,ImgOriginal, clf)
+
+    cv2.line(ImgOriginal, (0, 240), (640, 240), (0, 0, 255), 1)
+    cv2.line(ImgOriginal, (320, 0), (320, 480), (0, 0, 255), 1)
+   # cv2.imshow("ImgOriginal",ImgOriginal)
+
+    #time.sleep(0.01)
+
+    return ImgOriginal, imgGrayBlured
+#--------------------------------------------------------------------------
