@@ -779,3 +779,46 @@ def cmd_val():
 
     return ImgOriginal, imgGrayBlured
 #--------------------------------------------------------------------------
+def training():
+    global ObjectsGridSizeWidth
+    global ObjectsGridSizeHight
+    global BagOfWords
+    global clf
+    global bf
+
+    ObjectsGridSizeWidth = Cols / ObjectsGridNumber
+    ObjectsGridSizeHight = Rows / ObjectsGridNumber
+    DepthCenter()
+    BagOfWords = []
+    clf = cv2.SVM()
+    bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=False)
+    Err = 1
+    if (Err == 0):
+        PoolFeature = FeaturePoolGeneration('./Vision/DataSet1/')
+        model = KMeans(n_clusters=BoWSize, random_state=0).fit(PoolFeature)
+        BagOfWords = model.cluster_centers_
+
+        file = open('./Vision/DataSet1/BagOfWords.txt', 'w')
+        pickle.dump(BagOfWords, file)
+        file.close()
+
+        (HistBoW, labels) = HistogramOfBOW(BagOfWords, './Vision/DataSet1/')
+        # trainHistBoW = np.float32(np.array(HistBoW))
+        trainHistBoW, TestBoW, labels_train, labels_test = train_test_split(HistBoW, labels, test_size=0.1,
+                                                                      random_state=1)
+
+        clf.train(trainHistBoW, labels_train, params=svm_params)
+        clf.save("./Vision/DataSet1/mySVM.xml")
+
+        y_val = clf.predict_all(TestBoW)
+        print('number images: ', len(labels_test), ' are tested from :', len(labels))
+        Err = np.float32(y_val == labels_test)
+        y_val = np.concatenate((y_val, labels_test, (y_val == labels_test)), axis=1)
+        Acc = np.float32(sum(Err) / np.alen(Err) * 100)
+        print('Results: Accuracy: ', Acc, 'Recognition Rate: ', sum(Err), 'Total image test: ', np.alen(Err))
+
+    clf.load("./Vision/DataSet1/mySVM.xml")
+    file = open("DataSet1/BagOfWords.txt", 'r')
+    BagOfWords = pickle.load(file)
+#===========================================================================
+
