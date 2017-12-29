@@ -822,3 +822,89 @@ def training():
     BagOfWords = pickle.load(file)
 #===========================================================================
 
+myRobot=MrlRobot()
+MyObjects = MrlObjects(ID=0,ImgCropedInfo=[0,0,0,0, 0,0, 0,0, 0,0,0]) # Initating the Object class
+
+#===========================================================================
+
+#-------------------------Calling init functions  --------------------------
+
+#---------------------------------------------------------------------------
+
+################################################################### addded by faraz jalili ###########################
+
+if __name__ == '__main__':
+    ############### added by faraz jalili ######
+    #global Dx,Dy,Dp,Orint
+
+    #myThreadOb1 = socketThread(100)
+    #myThreadOb1.setName('Thread 1')
+    # Start running the threads!
+    #myThreadOb1.start()
+    ############################################
+    CamInit()
+
+    training()
+    # Cam_Config()
+    print "ok"
+    # s=input()
+    #Dx, Dy, Dth = np.float16(0.0), np.float16(0.0),np.float16(0.0)
+    #exit(0)
+    cmd_val()
+    #=================== set point ===========================
+    #===================
+
+    while (1):
+      ImgOriginal, ImgDepth=cmd_val()
+      cv2.imshow("ImgOriginal", ImgOriginal)
+      cv2.imshow("ImgDepth", ImgDepth)
+      Dx, Dy, Dth = 0.0, 0.0, 0.0
+      Xp, Yp, Dp = 0, 0, 0
+      Orint = 0
+      Idx1 = -1
+      Idx=-1
+      TT = 10000.0
+      for L in range(0, MyObjects.ObjCount(), 1):
+          Xp, Yp, Zp = np.float16(MyObjects.Obj_List[L].ObjPose[0:3])
+          Orint = MyObjects.Obj_List[Idx].ObjOrient
+          #print  (Idx, "Dx=", Xp, " Dy=", Yp, "\t Dp=", Zp, "\t Orint = ", TT)
+          Dp=int(Zp)
+          if(Dp==0): Dp=31
+          Scale = 5.0 * Dp / 31
+          Dx, Dy ,Dp = (Xp * Scale / 110),( Yp * Scale / 100), int(Zp)
+         # print  (Idx, "Xp=" , Dx, " Yp=" , Dy , "\t", Dp, "\t",Orint)
+          DD=(Dx * Dx + Dy * Dy)
+          if (DD < TT):
+              TT = DD
+              Idx1 = L
+
+      if (Idx1 >= 0):
+          Name= MyObjects.Obj_List[Idx].ObjName
+          Xp, Yp, Zp = np.float16(MyObjects.Obj_List[Idx1].ObjPose[0:3])
+          Width, Hight       =np.float16(MyObjects.Obj_List[Idx1].ObjWH[0:2])
+          Dp= int(Zp)
+          if(Dp==0): Dp=31
+          Orint = MyObjects.Obj_List[Idx1].ObjOrient
+          Scale = 5.0 * Dp / 31
+          Dx, Dy,Dp = (Xp * Scale / 110), (Yp * Scale / 100), int(Zp)
+
+          print  (Name, "  ", Idx1, "Dx=", Dx, " Dy=", Dy, "\t Dp=", Dp, "\t Orint = ", Orint,"Width=",Width ,"Hight",Hight)
+          Idx=Idx1
+          # talker(X=Dx, Y=Dy, Th=Dp, dxl4_p=Orint , dxl5_p= 0, gripper=1)
+
+      time.sleep(0.2)
+
+      #  print  (State ,Idx, Dp ,TimeOut, Dx, "\t\t", Dy, "\t\t", Dth)
+
+
+      k = cv2.waitKey(10) & 0xff
+      if k == 27:
+          break
+
+          #listener()
+#talker(X=0,Y=0, Th=0)
+
+#===========================================================================
+server = msgpackrpc.Server(SumServer())
+server.listen(msgpackrpc.Address("localhost", 18800))
+server.start()
